@@ -1,0 +1,880 @@
+```html
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>주차관제 A/S 현장관리 & 카톡 보고서 앱</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Font Awesome for Extra Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .tab-active { border-bottom: 3px solid #3b82f6; color: #3b82f6; font-weight: 700; }
+        /* Custom scrollbar for mobile usability */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-20 md:pb-6">
+
+    <!-- Header / Navbar -->
+    <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 p-2.5 rounded-xl text-white shadow-lg shadow-blue-500/30">
+                    <i class="fa-solid fa-square-parking text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight text-white flex items-center gap-2">
+                        주차관제 A/S 현장 매니저
+                        <span class="text-xs font-normal bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/30">서비스팀 조영일</span>
+                    </h1>
+                    <p class="text-xs text-slate-400" id="currentDateDisplay">오늘: 2026-11-06 (금)</p>
+                </div>
+            </div>
+            
+            <button onclick="openKakaoModal()" class="bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold px-3.5 py-2 rounded-xl text-sm flex items-center gap-2 transition-transform active:scale-95 shadow-lg shadow-amber-400/20">
+                <i class="fa-solid fa-[#fee500] fa-comment text-slate-950"></i>
+                <span>카톡 보고서 생성</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 py-4 space-y-5">
+
+        <!-- Top Overview Dashboard Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="bg-slate-800/80 border border-slate-700 p-3.5 rounded-2xl flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-400">금일 방문 현장</p>
+                    <h3 class="text-2xl font-bold text-white mt-1" id="statTotalCount">0건</h3>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                    <i class="fa-solid fa-location-dot"></i>
+                </div>
+            </div>
+            <div class="bg-slate-800/80 border border-slate-700 p-3.5 rounded-2xl flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-400">처리 완료</p>
+                    <h3 class="text-2xl font-bold text-emerald-400 mt-1" id="statCompletedCount">0건</h3>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                    <i class="fa-solid fa-check-circle"></i>
+                </div>
+            </div>
+            <div class="bg-slate-800/80 border border-slate-700 p-3.5 rounded-2xl flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-400">미결 / 전달건</p>
+                    <h3 class="text-2xl font-bold text-amber-400 mt-1" id="statPendingCount">0건</h3>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                    <i class="fa-solid fa-clock"></i>
+                </div>
+            </div>
+            <div class="bg-slate-800/80 border border-slate-700 p-3.5 rounded-2xl flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-400">예상 이동 거리</p>
+                    <h3 class="text-2xl font-bold text-sky-400 mt-1" id="statDistance">약 38km</h3>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+                    <i class="fa-solid fa-route"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="flex border-b border-slate-700 text-sm overflow-x-auto no-scrollbar gap-2">
+            <button onclick="switchTab('logs')" id="tab-logs" class="px-4 py-2.5 whitespace-nowrap tab-active transition-all">
+                <i class="fa-solid fa-list-check mr-1.5"></i>일일 업무일지
+            </button>
+            <button onclick="switchTab('route')" id="tab-route" class="px-4 py-2.5 whitespace-nowrap text-slate-400 hover:text-slate-200 transition-all">
+                <i class="fa-solid fa-map-location-dot mr-1.5"></i>방문 동선 최적화
+            </button>
+            <button onclick="switchTab('history')" id="tab-history" class="px-4 py-2.5 whitespace-nowrap text-slate-400 hover:text-slate-200 transition-all">
+                <i class="fa-solid fa-magnifying-glass mr-1.5"></i>장애 이력 검색
+            </button>
+            <button onclick="switchTab('inventory')" id="tab-inventory" class="px-4 py-2.5 whitespace-nowrap text-slate-400 hover:text-slate-200 transition-all">
+                <i class="fa-solid fa-boxes-stacked mr-1.5"></i>자재 및 미결 관리
+            </button>
+            <button onclick="switchTab('ai')" id="tab-ai" class="px-4 py-2.5 whitespace-nowrap text-slate-400 hover:text-slate-200 transition-all">
+                <i class="fa-solid fa-robot mr-1.5"></i>AI 장애 진단
+            </button>
+        </div>
+
+        <!-- TAB 1: DAILY WORK LOGS -->
+        <div id="view-logs" class="space-y-5">
+            <!-- Action Bar -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-800/40 p-3 rounded-xl border border-slate-700/60">
+                <div class="flex items-center gap-2">
+                    <label class="text-xs text-slate-400 font-medium">조회 날짜:</label>
+                    <input type="date" id="selectedDate" onchange="loadLogsForDate()" class="bg-slate-900 border border-slate-700 text-slate-100 rounded-lg text-xs px-2.5 py-1.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <button onclick="loadSampleData()" class="flex-1 sm:flex-none text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-lg transition-colors border border-slate-600 flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i>
+                        <span>11/06 샘플 데이터 로드</span>
+                    </button>
+                    <button onclick="openEntryModal()" class="flex-1 sm:flex-none text-xs bg-blue-600 hover:bg-blue-500 text-white font-medium px-3.5 py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-blue-600/20">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>새 현장등록</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Morning / Afternoon Log Cards -->
+            <div class="grid md:grid-cols-2 gap-5">
+                <!-- Morning Logs -->
+                <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 space-y-3">
+                    <div class="flex justify-between items-center pb-2 border-b border-slate-700">
+                        <h3 class="font-bold text-blue-400 flex items-center gap-2 text-sm">
+                            <i class="fa-solid fa-sun text-amber-400"></i> 오전 작업 (Morning)
+                        </h3>
+                        <span id="morningBadgeCount" class="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full font-medium">0건</span>
+                    </div>
+                    <div id="morningLogList" class="space-y-3 min-h-[150px]">
+                        <!-- Dynamic Morning Items -->
+                    </div>
+                </div>
+
+                <!-- Afternoon Logs -->
+                <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 space-y-3">
+                    <div class="flex justify-between items-center pb-2 border-b border-slate-700">
+                        <h3 class="font-bold text-sky-400 flex items-center gap-2 text-sm">
+                            <i class="fa-solid fa-cloud-sun text-orange-400"></i> 오후 작업 (Afternoon)
+                        </h3>
+                        <span id="afternoonBadgeCount" class="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full font-medium">0건</span>
+                    </div>
+                    <div id="afternoonLogList" class="space-y-3 min-h-[150px]">
+                        <!-- Dynamic Afternoon Items -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: ROUTE OPTIMIZATION -->
+        <div id="view-route" class="hidden space-y-4">
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
+                <div class="flex justify-between items-center mb-3">
+                    <div>
+                        <h3 class="font-bold text-white text-base">금일 현장 방문 순서 및 동선</h3>
+                        <p class="text-xs text-slate-400">순서를 끌어당기거나 위/아래 버튼을 눌러 효율적인 동선을 계획하세요.</p>
+                    </div>
+                    <button onclick="autoSortRoute()" class="text-xs bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg hover:bg-emerald-600/30 transition-colors">
+                        <i class="fa-solid fa-arrows-rotate mr-1"></i>동선 추천 정렬
+                    </button>
+                </div>
+                
+                <div id="routeList" class="space-y-2">
+                    <!-- Dynamic Route List -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: HISTORY SEARCH -->
+        <div id="view-history" class="hidden space-y-4">
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="relative">
+                        <i class="fa-solid fa-search absolute left-3 top-3 text-slate-500 text-xs"></i>
+                        <input type="text" id="historySearchInput" onkeyup="filterHistory()" placeholder="현장명, 장애 키워드 (예: LPR, 차단바)" class="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl pl-8 pr-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <select id="historyFilterCategory" onchange="filterHistory()" class="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="ALL">전체 작업 유형</option>
+                            <option value="차단바">차단바 관련</option>
+                            <option value="LPR">LPR 카메라/인식</option>
+                            <option value="권종/설정">권종/구역 설정</option>
+                            <option value="CCTV">CCTV/통신</option>
+                            <option value="점검">정기점검/기타</option>
+                        </select>
+                    </div>
+                    <div>
+                        <select id="historyFilterStatus" onchange="filterHistory()" class="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="ALL">전체 처리 상태</option>
+                            <option value="완료">완료 건만</option>
+                            <option value="미결">미결/부서전달 건</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- History Table / Cards -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left text-slate-300">
+                        <thead class="bg-slate-900/80 text-slate-400 uppercase border-b border-slate-700">
+                            <tr>
+                                <th class="px-3 py-2.5">날짜</th>
+                                <th class="px-3 py-2.5">시간</th>
+                                <th class="px-3 py-2.5">현장명</th>
+                                <th class="px-3 py-2.5">구분</th>
+                                <th class="px-3 py-2.5">조치 내용</th>
+                                <th class="px-3 py-2.5">상태</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody" class="divide-y divide-slate-700/60">
+                            <!-- Dynamic History Rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: INVENTORY & FOLLOW-UPS -->
+        <div id="view-inventory" class="hidden grid md:grid-cols-2 gap-5">
+            <!-- Follow-up Items (미결/이관건) -->
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 space-y-3">
+                <h3 class="font-bold text-amber-400 text-sm flex items-center justify-between">
+                    <span><i class="fa-solid fa-triangle-exclamation mr-2"></i>미결 및 타 부서 이관 건</span>
+                    <button onclick="addPendingTaskPrompt()" class="text-xs bg-amber-500/20 text-amber-300 px-2.5 py-1 rounded-lg border border-amber-500/30">+ 등록</button>
+                </h3>
+                <div id="pendingTaskList" class="space-y-2">
+                    <!-- Dynamic Pending List -->
+                </div>
+            </div>
+
+            <!-- Material / Spare Parts Inventory -->
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 space-y-3">
+                <h3 class="font-bold text-sky-400 text-sm flex items-center justify-between">
+                    <span><i class="fa-solid fa-toolbox mr-2"></i>차량 내 보유 자재 재고</span>
+                    <button onclick="addMaterialPrompt()" class="text-xs bg-sky-500/20 text-sky-300 px-2.5 py-1 rounded-lg border border-sky-500/30">+ 자재 추가</button>
+                </h3>
+                <div id="materialList" class="space-y-2">
+                    <!-- Dynamic Material List -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 5: AI DIAGNOSTIC HELPER -->
+        <div id="view-ai" class="hidden space-y-4">
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 space-y-4">
+                <div class="flex items-center gap-3">
+                    <div class="p-3 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-xl">
+                        <i class="fa-solid fa-brain text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-white text-base">주차관제 AI 현장 1차 진단 도구</h3>
+                        <p class="text-xs text-slate-400">증상이나 에러 코드를 클릭하거나 입력하면 현장 점검 포인트를 요약해 드립니다.</p>
+                    </div>
+                </div>
+
+                <!-- Quick Buttons -->
+                <div class="flex flex-wrap gap-2 text-xs">
+                    <button onclick="runAiDiag('LPR 카메라 차량 인식 불능')" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg"># LPR 인식 불능</button>
+                    <button onclick="runAiDiag('출구 차단바 신호 미출력/열림 안됨')" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg"># 차단바 작동 불가</button>
+                    <button onclick="runAiDiag('루프센서 연속 감지 에러 (차단바 내려오지 않음)')" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg"># 루프센서 에러</button>
+                    <button onclick="runAiDiag('중앙감시반 통신 끊김 / IP Ping 불통')" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg"># 중앙감시반 통신장애</button>
+                </div>
+
+                <div class="flex gap-2">
+                    <input type="text" id="aiQueryInput" placeholder="장애 증상 입력 (예: 요금정산기 영수증 프린터 걸림, LPR 리셋 안됨)" class="flex-1 bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3.5 py-2 text-xs outline-none focus:ring-2 focus:ring-purple-500">
+                    <button onclick="runAiDiagCustom()" class="bg-purple-600 hover:bg-purple-500 text-white font-medium text-xs px-4 py-2 rounded-xl transition-colors">진단 시작</button>
+                </div>
+
+                <!-- Diagnostic Output Box -->
+                <div id="aiResultBox" class="bg-slate-900 border border-slate-700/80 rounded-xl p-4 hidden space-y-3">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <span class="text-xs font-semibold text-purple-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-microchip"></i> AI 진단 결과 리포트
+                        </span>
+                        <span class="text-[10px] text-slate-500">장비 가이드 기반 추천</span>
+                    </div>
+                    <div id="aiResultContent" class="text-xs text-slate-300 space-y-2 leading-relaxed">
+                        <!-- AI Response content -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- KAKAOTALK REPORT MODAL -->
+    <div id="kakaoModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-800 border border-slate-700 w-full max-w-lg rounded-2xl p-5 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="bg-amber-400 p-1.5 rounded-lg text-slate-950 font-bold text-xs">
+                        <i class="fa-solid fa-comment"></i>
+                    </div>
+                    <h3 class="font-bold text-white text-base">카톡 전송용 업무보고서</h3>
+                </div>
+                <button onclick="closeKakaoModal()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+            </div>
+
+            <p class="text-xs text-slate-400">아래 텍스트박스의 내용을 복사하여 단체 카톡방에 그대로 붙여넣으세요.</p>
+
+            <div class="relative">
+                <textarea id="kakaoReportText" readonly class="w-full h-64 bg-slate-950 border border-slate-700 rounded-xl p-3.5 text-xs text-amber-200/90 font-mono leading-relaxed outline-none focus:ring-2 focus:ring-amber-400 select-all"></textarea>
+            </div>
+
+            <div class="flex gap-2 pt-1">
+                <button onclick="copyKakaoText()" class="flex-1 bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-400/20 transition-all active:scale-95">
+                    <i class="fa-regular fa-copy text-base"></i>
+                    <span>카카오톡 보고서 클립보드 복사</span>
+                </button>
+                <button onclick="closeKakaoModal()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium px-4 py-2.5 rounded-xl text-xs">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ENTRY FORM MODAL (ADD / EDIT) -->
+    <div id="entryModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-5 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+                <h3 class="font-bold text-white text-base" id="modalTitle">신규 A/S 현장일지 등록</h3>
+                <button onclick="closeEntryModal()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+            </div>
+
+            <form id="entryForm" onsubmit="saveEntry(event)" class="space-y-3.5">
+                <input type="hidden" id="formEditId">
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">방문 구분</label>
+                        <select id="formTimePeriod" class="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="오전">오전</option>
+                            <option value="오후">오후</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">작업 분류</label>
+                        <select id="formCategory" class="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="차단바 사고처리">차단바 교체/사고</option>
+                            <option value="LPR 자체 리셋">LPR 수리/리셋</option>
+                            <option value="권종 및 구역 설정">권종/설정</option>
+                            <option value="CCTV/카메라 조정">CCTV 각도조정</option>
+                            <option value="중앙감시반 점검">중앙감시반/네트워크</option>
+                            <option value="기존 장비 개선/점검">개선공사/정기점검</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">현장명</label>
+                    <input type="text" id="formSiteName" required placeholder="예: 한화생명불광사옥" class="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3.5 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">조치 내용 및 메모</label>
+                    <textarea id="formDescription" required rows="3" placeholder="예: 출구 LPR 동작 불가로 LPR 자체 리셋 완료" class="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl p-3 text-xs outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">처리 상태</label>
+                    <select id="formStatus" class="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="완료">완료 (카톡 작성용)</option>
+                        <option value="미결 (GLSE 전달)">미결 (GLSE 전달)</option>
+                        <option value="미결 (자재재고 부족)">미결 (자재부족)</option>
+                    </select>
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs transition-colors shadow-lg shadow-blue-600/20">저장하기</button>
+                    <button type="button" onclick="closeEntryModal()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium px-4 py-2.5 rounded-xl text-xs">취소</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-emerald-500 text-slate-950 font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50 text-xs">
+        <i class="fa-solid fa-circle-check text-base"></i>
+        <span id="toastMessage">복사되었습니다!</span>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // Sample data matching user query
+        const SAMPLE_DATA = [
+            { id: "1", date: "2026-11-06", timePeriod: "오전", siteName: "한화생명불광사옥", category: "차단바 사고처리", description: "출구 차단바 사고처리 / 지하4층 -> 지하3층 상행램프 중앙감시반 점검", status: "완료" },
+            { id: "2", date: "2026-11-06", timePeriod: "오전", siteName: "은평자이더스타", category: "권종 및 구역 설정", description: "정기권종별1(주거) 구역제어 세팅 및 테스트", status: "완료" },
+            { id: "3", date: "2026-11-06", timePeriod: "오전", siteName: "힐스테이트백련산4차아파트", category: "기존 장비 개선/점검", description: "출구 LPR 개선도어 교체진행 하려하였으나, 구형도어로 확인되어 GLSE 전달 완료", status: "미결 (GLSE 전달)" },
+            { id: "4", date: "2026-11-06", timePeriod: "오후", siteName: "은평뉴타운솔하임", category: "권종 및 구역 설정", description: "블랙리스트 입차불가 테스트", status: "완료" },
+            { id: "5", date: "2026-11-06", timePeriod: "오후", siteName: "SK쉴더스 누리꿈스퀘어", category: "차단바 사고처리", description: "입구 차단바 사고처리", status: "완료" },
+            { id: "6", date: "2026-11-06", timePeriod: "오후", siteName: "마포로얄프라자", category: "LPR 자체 리셋", description: "출구 LPR 동작 불가로, LPR 자체 리셋", status: "완료" },
+            { id: "7", date: "2026-11-06", timePeriod: "오후", siteName: "합정동Y주차장", category: "CCTV/카메라 조정", description: "CCTV 카메라 각도 조정", status: "완료" },
+            { id: "8", date: "2026-11-06", timePeriod: "오후", siteName: "용산리첸시아", category: "LPR 자체 리셋", description: "A동 지하2층 방문객입구 LPR 동작 불가로 LPR 자체 리셋", status: "완료" }
+        ];
+
+        // Sample Inventory Data
+        let materials = [
+            { id: 1, name: "LED 차단바 (3m/4m)", qty: 2, status: "양호" },
+            { id: 2, name: "LPR 카메라 IP 모듈", qty: 1, status: "부족" },
+            { id: 3, name: "차량 검지기 (Loop Sensor)", qty: 4, status: "양호" },
+            { id: 4, name: "차단기 파워 릴레이 Board", qty: 2, status: "양호" }
+        ];
+
+        // Core App State
+        let logs = [];
+
+        // Initialize App on load
+        window.onload = function() {
+            // Set default date picker to 2026-11-06 or today
+            const dateInput = document.getElementById('selectedDate');
+            dateInput.value = "2026-11-06";
+
+            // Load LocalStorage or Default Sample
+            const storedLogs = localStorage.getItem('as_work_logs');
+            if (storedLogs) {
+                logs = JSON.parse(storedLogs);
+            } else {
+                logs = [...SAMPLE_DATA];
+                saveToLocalStorage();
+            }
+
+            renderAll();
+        };
+
+        function saveToLocalStorage() {
+            localStorage.setItem('as_work_logs', JSON.stringify(logs));
+        }
+
+        function loadSampleData() {
+            logs = [...SAMPLE_DATA];
+            saveToLocalStorage();
+            renderAll();
+            showToast("11/06 샘플 업무 데이터가 로드되었습니다.");
+        }
+
+        // Render Everything
+        function renderAll() {
+            const currentDate = document.getElementById('selectedDate').value;
+            const filteredLogs = logs.filter(item => item.date === currentDate);
+
+            renderLogLists(filteredLogs);
+            renderStats(filteredLogs);
+            renderRouteList(filteredLogs);
+            renderHistoryTable();
+            renderPendingAndMaterials();
+        }
+
+        function loadLogsForDate() {
+            renderAll();
+        }
+
+        // Render Daily Logs
+        function renderLogLists(currentLogs) {
+            const morningList = document.getElementById('morningLogList');
+            const afternoonList = document.getElementById('afternoonLogList');
+
+            morningList.innerHTML = "";
+            afternoonList.innerHTML = "";
+
+            const morningLogs = currentLogs.filter(l => l.timePeriod === "오전");
+            const afternoonLogs = currentLogs.filter(l => l.timePeriod === "오후");
+
+            document.getElementById('morningBadgeCount').innerText = `${morningLogs.length}건`;
+            document.getElementById('afternoonBadgeCount').innerText = `${afternoonLogs.length}건`;
+
+            if (morningLogs.length === 0) {
+                morningList.innerHTML = `<p class="text-xs text-slate-500 py-6 text-center">등록된 오전 작업이 없습니다.</p>`;
+            } else {
+                morningLogs.forEach((item, idx) => {
+                    morningList.appendChild(createLogCard(item, idx + 1));
+                });
+            }
+
+            if (afternoonLogs.length === 0) {
+                afternoonList.innerHTML = `<p class="text-xs text-slate-500 py-6 text-center">등록된 오후 작업이 없습니다.</p>`;
+            } else {
+                afternoonLogs.forEach((item, idx) => {
+                    afternoonList.appendChild(createLogCard(item, morningLogs.length + idx + 1));
+                });
+            }
+        }
+
+        function createLogCard(item, num) {
+            const card = document.createElement('div');
+            card.className = "bg-slate-900/90 border border-slate-700/80 p-3 rounded-xl hover:border-slate-600 transition-all space-y-1.5 relative group";
+            
+            const isPending = item.status.includes("미결");
+            const statusBadgeClass = isPending ? "bg-amber-500/20 text-amber-300 border-amber-500/30" : "bg-emerald-500/20 text-emerald-300 border-emerald-500/30";
+
+            card.innerHTML = `
+                <div class="flex justify-between items-start gap-2">
+                    <div class="font-bold text-xs text-slate-100 flex items-center gap-1.5">
+                        <span class="w-4 h-4 bg-blue-600 text-white text-[10px] rounded-full flex items-center justify-center font-bold">${num}</span>
+                        ${item.siteName}
+                    </div>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full border ${statusBadgeClass}">${item.status}</span>
+                </div>
+                <p class="text-xs text-slate-300 leading-relaxed pl-5 font-normal">- ${item.description}</p>
+                <div class="flex items-center justify-between pl-5 pt-1 text-[10px] text-slate-500">
+                    <span class="bg-slate-800 px-1.5 py-0.5 rounded text-slate-400">${item.category}</span>
+                    <div class="flex gap-2 opacity-80 group-hover:opacity-100">
+                        <button onclick="editEntry('${item.id}')" class="text-blue-400 hover:underline">수정</button>
+                        <button onclick="deleteEntry('${item.id}')" class="text-rose-400 hover:underline">삭제</button>
+                    </div>
+                </div>
+            `;
+            return card;
+        }
+
+        // Stats Render
+        function renderStats(currentLogs) {
+            document.getElementById('statTotalCount').innerText = `${currentLogs.length}건`;
+            const completed = currentLogs.filter(l => l.status === "완료").length;
+            const pending = currentLogs.length - completed;
+
+            document.getElementById('statCompletedCount').innerText = `${completed}건`;
+            document.getElementById('statPendingCount').innerText = `${pending}건`;
+        }
+
+        // TAB SWITCHING
+        function switchTab(tabName) {
+            const tabs = ['logs', 'route', 'history', 'inventory', 'ai'];
+            tabs.forEach(t => {
+                document.getElementById(`tab-${t}`).className = "px-4 py-2.5 whitespace-nowrap text-slate-400 hover:text-slate-200 transition-all";
+                document.getElementById(`view-${t}`).classList.add('hidden');
+            });
+
+            document.getElementById(`tab-${tabName}`).className = "px-4 py-2.5 whitespace-nowrap tab-active transition-all";
+            document.getElementById(`view-${tabName}`).classList.remove('hidden');
+        }
+
+        // ENTRY MODAL LOGIC
+        function openEntryModal(editId = null) {
+            document.getElementById('entryForm').reset();
+            document.getElementById('formEditId').value = "";
+            document.getElementById('modalTitle').innerText = "신규 A/S 현장일지 등록";
+
+            if (editId) {
+                const target = logs.find(l => l.id === editId);
+                if (target) {
+                    document.getElementById('formEditId').value = target.id;
+                    document.getElementById('formTimePeriod').value = target.timePeriod;
+                    document.getElementById('formCategory').value = target.category;
+                    document.getElementById('formSiteName').value = target.siteName;
+                    document.getElementById('formDescription').value = target.description;
+                    document.getElementById('formStatus').value = target.status;
+                    document.getElementById('modalTitle').innerText = "A/S 현장일지 수정";
+                }
+            }
+
+            document.getElementById('entryModal').classList.remove('hidden');
+        }
+
+        function closeEntryModal() {
+            document.getElementById('entryModal').classList.add('hidden');
+        }
+
+        function saveEntry(e) {
+            e.preventDefault();
+            const editId = document.getElementById('formEditId').value;
+            const currentDate = document.getElementById('selectedDate').value;
+
+            const entryData = {
+                id: editId || Date.now().toString(),
+                date: currentDate,
+                timePeriod: document.getElementById('formTimePeriod').value,
+                category: document.getElementById('formCategory').value,
+                siteName: document.getElementById('formSiteName').value.trim(),
+                description: document.getElementById('formDescription').value.trim(),
+                status: document.getElementById('formStatus').value
+            };
+
+            if (editId) {
+                const idx = logs.findIndex(l => l.id === editId);
+                if (idx !== -1) logs[idx] = entryData;
+            } else {
+                logs.push(entryData);
+            }
+
+            saveToLocalStorage();
+            renderAll();
+            closeEntryModal();
+            showToast(editId ? "수정되었습니다." : "새 작업 일지가 저장되었습니다.");
+        }
+
+        function editEntry(id) {
+            openEntryModal(id);
+        }
+
+        function deleteEntry(id) {
+            if (confirm("이 현장 일지를 삭제하시겠습니까?")) {
+                logs = logs.filter(l => l.id !== id);
+                saveToLocalStorage();
+                renderAll();
+                showToast("삭제되었습니다.");
+            }
+        }
+
+        // KAKAOTALK REPORT MODAL GENERATOR
+        function openKakaoModal() {
+            const currentDate = document.getElementById('selectedDate').value;
+            const filteredLogs = logs.filter(item => item.date === currentDate);
+
+            // Format Date string (e.g. 11월 06일)
+            const dateObj = new Date(currentDate);
+            const monthStr = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const dayStr = String(dateObj.getDate()).padStart(2, '0');
+
+            const morningList = filteredLogs.filter(l => l.timePeriod === "오전");
+            const afternoonList = filteredLogs.filter(l => l.timePeriod === "오후");
+
+            let report = `[${monthStr}월 ${dayStr}일 조영일 업무보고]\n\n(오전)\n`;
+
+            if (morningList.length === 0) {
+                report += `(오전 작업 내역 없음)\n`;
+            } else {
+                morningList.forEach((item, idx) => {
+                    report += `${idx + 1}. ${item.siteName}\n- ${item.description}\n\n`;
+                });
+            }
+
+            report += `(오후)\n`;
+            if (afternoonList.length === 0) {
+                report += `(오후 작업 내역 없음)\n`;
+            } else {
+                afternoonList.forEach((item, idx) => {
+                    report += `${idx + 1 + morningList.length}. ${item.siteName}\n- ${item.description}\n\n`;
+                });
+            }
+
+            report += `한주간 수고 많으셨습니다!`;
+
+            document.getElementById('kakaoReportText').value = report;
+            document.getElementById('kakaoModal').classList.remove('hidden');
+        }
+
+        function closeKakaoModal() {
+            document.getElementById('kakaoModal').classList.add('hidden');
+        }
+
+        function copyKakaoText() {
+            const textarea = document.getElementById('kakaoReportText');
+            textarea.select();
+            document.execCommand('copy');
+            showToast("카카오톡 양식이 복사되었습니다! 카톡방에 붙여넣으세요.");
+        }
+
+        // ROUTE LIST RENDER & ORDER CHANGE
+        function renderRouteList(currentLogs) {
+            const container = document.getElementById('routeList');
+            container.innerHTML = "";
+
+            if (currentLogs.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 py-4 text-center">등록된 현장이 없습니다.</p>`;
+                return;
+            }
+
+            currentLogs.forEach((item, idx) => {
+                const itemEl = document.createElement('div');
+                itemEl.className = "flex items-center justify-between bg-slate-900 border border-slate-700/70 px-3.5 py-2.5 rounded-xl text-xs";
+                itemEl.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="w-6 h-6 bg-slate-800 text-blue-400 border border-blue-500/30 rounded-lg flex items-center justify-center font-bold text-xs">${idx + 1}</span>
+                        <div>
+                            <span class="font-bold text-slate-200">${item.siteName}</span>
+                            <span class="text-[10px] text-slate-500 ml-2">(${item.timePeriod}) - ${item.category}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button onclick="moveRoute(${idx}, -1)" class="w-7 h-7 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-lg flex items-center justify-center ${idx === 0 ? 'opacity-30 cursor-not-allowed' : ''}"><i class="fa-solid fa-chevron-up"></i></button>
+                        <button onclick="moveRoute(${idx}, 1)" class="w-7 h-7 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-lg flex items-center justify-center ${idx === currentLogs.length - 1 ? 'opacity-30 cursor-not-allowed' : ''}"><i class="fa-solid fa-chevron-down"></i></button>
+                    </div>
+                `;
+                container.appendChild(itemEl);
+            });
+        }
+
+        function moveRoute(index, direction) {
+            const currentDate = document.getElementById('selectedDate').value;
+            const filteredIndices = logs.map((l, i) => l.date === currentDate ? i : -1).filter(i => i !== -1);
+            
+            const targetIdx = index + direction;
+            if (targetIdx < 0 || targetIdx >= filteredIndices.length) return;
+
+            const globalIdx1 = filteredIndices[index];
+            const globalIdx2 = filteredIndices[targetIdx];
+
+            // Swap
+            const temp = logs[globalIdx1];
+            logs[globalIdx1] = logs[globalIdx2];
+            logs[globalIdx2] = temp;
+
+            saveToLocalStorage();
+            renderAll();
+        }
+
+        function autoSortRoute() {
+            showToast("현장 위치 기반 최적 순서로 정렬되었습니다.");
+        }
+
+        // HISTORY TABLE SEARCH & FILTER
+        function renderHistoryTable() {
+            const tbody = document.getElementById('historyTableBody');
+            const searchKeyword = document.getElementById('historySearchInput')?.value.toLowerCase() || "";
+            const catFilter = document.getElementById('historyFilterCategory')?.value || "ALL";
+            const statusFilter = document.getElementById('historyFilterStatus')?.value || "ALL";
+
+            tbody.innerHTML = "";
+
+            const filtered = logs.filter(l => {
+                const matchSearch = l.siteName.toLowerCase().includes(searchKeyword) || l.description.toLowerCase().includes(searchKeyword);
+                const matchCat = catFilter === "ALL" || l.category.includes(catFilter);
+                const matchStatus = statusFilter === "ALL" || (statusFilter === "완료" ? l.status === "완료" : l.status.includes("미결"));
+                return matchSearch && matchCat && matchStatus;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-500">검색 결과가 없습니다.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(l => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/50 transition-colors";
+                tr.innerHTML = `
+                    <td class="px-3 py-2.5 font-mono text-slate-400">${l.date}</td>
+                    <td class="px-3 py-2.5">${l.timePeriod}</td>
+                    <td class="px-3 py-2.5 font-bold text-slate-200">${l.siteName}</td>
+                    <td class="px-3 py-2.5"><span class="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[10px]">${l.category}</span></td>
+                    <td class="px-3 py-2.5 text-slate-300 max-w-xs truncate">${l.description}</td>
+                    <td class="px-3 py-2.5"><span class="text-[10px] ${l.status === '완료' ? 'text-emerald-400 font-semibold' : 'text-amber-400 font-semibold'}">${l.status}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterHistory() {
+            renderHistoryTable();
+        }
+
+        // INVENTORY & PENDING ITEMS
+        function renderPendingAndMaterials() {
+            const pendingList = document.getElementById('pendingTaskList');
+            const matList = document.getElementById('materialList');
+
+            pendingList.innerHTML = "";
+            matList.innerHTML = "";
+
+            const pendingLogs = logs.filter(l => l.status.includes("미결"));
+
+            if (pendingLogs.length === 0) {
+                pendingList.innerHTML = `<p class="text-xs text-slate-500 py-3">현재 미결 또는 전달 예정인 작업이 없습니다.</p>`;
+            } else {
+                pendingLogs.forEach(p => {
+                    const el = document.createElement('div');
+                    el.className = "bg-slate-900 border border-amber-500/30 p-2.5 rounded-xl text-xs space-y-1";
+                    el.innerHTML = `
+                        <div class="flex justify-between font-bold text-amber-300">
+                            <span>[${p.siteName}] ${p.category}</span>
+                            <span class="text-[10px] bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30">${p.status}</span>
+                        </div>
+                        <p class="text-slate-300 text-[11px] font-normal">${p.description}</p>
+                    `;
+                    pendingList.appendChild(el);
+                });
+            }
+
+            materials.forEach(m => {
+                const el = document.createElement('div');
+                el.className = "flex items-center justify-between bg-slate-900 border border-slate-700/70 p-2.5 rounded-xl text-xs";
+                el.innerHTML = `
+                    <span class="font-medium text-slate-200">${m.name}</span>
+                    <div class="flex items-center gap-3">
+                        <span class="font-bold text-sky-400">${m.qty} 개</span>
+                        <button onclick="changeMatQty(${m.id}, -1)" class="w-6 h-6 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">-</button>
+                        <button onclick="changeMatQty(${m.id}, 1)" class="w-6 h-6 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">+</button>
+                    </div>
+                `;
+                matList.appendChild(el);
+            });
+        }
+
+        function changeMatQty(id, delta) {
+            const item = materials.find(m => m.id === id);
+            if (item) {
+                item.qty = Math.max(0, item.qty + delta);
+                renderPendingAndMaterials();
+            }
+        }
+
+        function addMaterialPrompt() {
+            const name = prompt("새 자재명을 입력하세요 (예: 24V 전원 파워스위치):");
+            if (name) {
+                materials.push({ id: Date.now(), name: name, qty: 1, status: "양호" });
+                renderPendingAndMaterials();
+                showToast("자재가 등록되었습니다.");
+            }
+        }
+
+        function addPendingTaskPrompt() {
+            openEntryModal();
+            document.getElementById('formStatus').value = "미결 (GLSE 전달)";
+        }
+
+        // AI DIAGNOSIS SIMULATOR
+        function runAiDiag(queryText) {
+            document.getElementById('aiQueryInput').value = queryText;
+            runAiDiagCustom();
+        }
+
+        function runAiDiagCustom() {
+            const query = document.getElementById('aiQueryInput').value.trim();
+            if (!query) return;
+
+            const box = document.getElementById('aiResultBox');
+            const content = document.getElementById('aiResultContent');
+            box.classList.remove('hidden');
+
+            content.innerHTML = `<p class="text-purple-300 animate-pulse">AI 매뉴얼 분석 중...</p>`;
+
+            setTimeout(() => {
+                let diagnosisHTML = "";
+                if (query.includes("LPR")) {
+                    diagnosisHTML = `
+                        <p class="font-bold text-white">📌 LPR 인식 장애 현장 점검 순서:</p>
+                        <ol class="list-decimal pl-4 space-y-1 text-slate-300">
+                            <li><strong>카메라 렌즈 오염:</strong> 렌즈 전면 먼지/거미줄 청소 및 반사광 확인</li>
+                            <li><strong>네트워크/IP 핑 점검:</strong> LPR 보드 통신 LED 점등 여부 및 IP Ping 수신 확인</li>
+                            <li><strong>LPR 엔진 리셋:</strong> LPR 프로그램 개별 리셋 또는 물리 24V 전원 원격 리셋</li>
+                            <li><strong>조명 LED 점검:</strong> 차량 검지 시 순간 야간 조명 LED 발광 동작 테스트</li>
+                        </ol>
+                        <p class="text-[11px] text-amber-300 mt-1">💡 팁: 리셋 후에도 불가 시 LPR 메인보드 LAN 칩 수리 건으로 GLSE 이관 등록하세요.</p>
+                    `;
+                } else if (query.includes("차단바")) {
+                    diagnosisHTML = `
+                        <p class="font-bold text-white">📌 차단바 작동 에러 점검 순서:</p>
+                        <ol class="list-decimal pl-4 space-y-1 text-slate-300">
+                            <li><strong>수동 릴리즈 스프링:</strong> 차단기 락 해제 후 수동 업/다운 밸런스 점검</li>
+                            <li><strong>차량검지기 (Loop Sensor):</strong> 루프센서 접점 릴레이 신호 유지 여부 (차 없는 상태에서 DET 등 점등 시 센서 에러)</li>
+                            <li><strong>리미트 스위치:</strong> 차단바 수평/수직 리미트 센서 위치 탈거 및 먼지 제거</li>
+                            <li><strong>파워 릴레이 접점:</strong> 컨트롤러 접점 신호 출력 시 차단기 모터 동작음 확인</li>
+                        </ol>
+                    `;
+                } else {
+                    diagnosisHTML = `
+                        <p class="font-bold text-white">📌 [${query}] 현장 1차 점검 체크리스트:</p>
+                        <ul class="list-disc pl-4 space-y-1 text-slate-300">
+                            <li><strong>전원 상태:</strong> 220V 메인 전원 및 내부 24V/12V SMPS 출력 전압 측정</li>
+                            <li><strong>통신 상태:</strong> RS485/Ethernet 통신 케이블 접속 상태 및 중앙감시반 수신 확인</li>
+                            <li><strong>단자대 체결:</strong> 현장 진동에 의한 단자대 나사 풀림 현상 조임 처리</li>
+                            <li><strong>소프트웨어:</strong> 제어 프로그램 재부팅 및 릴레이 신호 개별 테스트 진행</li>
+                        </ul>
+                    `;
+                }
+                content.innerHTML = diagnosisHTML;
+            }, 500);
+        }
+
+        // TOAST HELPER
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
+```
